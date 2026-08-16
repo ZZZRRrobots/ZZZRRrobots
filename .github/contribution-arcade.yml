@@ -1,0 +1,52 @@
+name: Update Contribution Arcade
+
+on:
+  schedule:
+    - cron: "17 */12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate Snake
+        uses: Platane/snk@v3
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          outputs: |
+            snake-dist/github-snake.svg
+            snake-dist/github-snake-dark.svg?palette=github-dark
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Pac-Man
+        uses: abozanona/pacman-contribution-graph@main
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          games: 'pacman'
+
+      - name: Assemble arcade graphics
+        shell: bash
+        run: |
+          rm -rf dist-final
+          mkdir -p dist-final
+          if [ -d dist ]; then cp -R dist/. dist-final/; fi
+          if [ -d snake-dist ]; then cp -R snake-dist/. dist-final/; fi
+          find dist-final -maxdepth 1 -type f -name '*.svg' -print
+
+      - name: Publish arcade graphics
+        uses: crazy-max/ghaction-github-pages@v3.1.0
+        with:
+          target_branch: output
+          build_dir: dist-final
+          commit_message: "Update contribution arcade"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
